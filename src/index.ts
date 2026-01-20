@@ -21,6 +21,7 @@ interface Options {
   yes?: boolean;
   skill?: string[];
   list?: boolean;
+  all?: boolean;
 }
 
 program
@@ -33,6 +34,7 @@ program
   .option('-s, --skill <skills...>', 'Specify skill names to install (skip selection prompt)')
   .option('-l, --list', 'List available skills in the repository without installing')
   .option('-y, --yes', 'Skip confirmation prompts')
+  .option('--all', 'Install all skills to all agents without any prompts (implies -y -g)')
   .configureOutput({
     outputError: (str, write) => {
       if (str.includes('missing required argument')) {
@@ -59,6 +61,12 @@ program
 program.parse();
 
 async function main(source: string, options: Options) {
+  // --all implies -y and -g
+  if (options.all) {
+    options.yes = true;
+    options.global = true;
+  }
+
   console.log();
   p.intro(chalk.bgCyan.black(' skills '));
 
@@ -182,6 +190,10 @@ async function main(source: string, options: Options) {
       }
 
       targetAgents = options.agent as AgentType[];
+    } else if (options.all) {
+      // --all flag: install to all agents without detection
+      targetAgents = validAgents as AgentType[];
+      p.log.info(`Installing to all ${targetAgents.length} agents`);
     } else {
       spinner.start('Detecting installed agents...');
       const installedAgents = await detectInstalledAgents();
